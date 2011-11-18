@@ -7,63 +7,15 @@
  *
  * Copyright 2009-2011 Kris Kowal under the terms of the MIT
  * license found at http://github.com/kriskowal/q/raw/master/LICENSE
+ * Forked at 8ff517e193185b100feb881185957a7f211b4c72: 2011-10-13
  *
+ * Copyright 2011 Chris Joel under the terms of the MIT license found at
+ * http://github.com/cdata/q/raw/master/LICENSE
  */
-
-(function (definition) {
-
-    // This file will function properly as a <script> tag, or a module
-    // using CommonJS and NodeJS or RequireJS module formats.  In
-    // Common/Node/RequireJS, the module exports the Q API and when
-    // executed as a simple <script>, it creates a Q global instead.
-
-    // RequireJS
-    if (typeof define === "function") {
-        define(definition);
-    // CommonJS
-    } else if (typeof exports === "object") {
-        definition(require, exports);
-    // <script>
-    } else {
-        definition(void 0, Q = {});
-    }
-
-})(function (serverSideRequire, exports) {
+var makeQ = function (nextTick) {
 "use strict";
 
-
-var nextTick;
-try {
-    // Narwhal, Node (with a package, wraps process.nextTick)
-    // "require" is renamed to "serverSideRequire" so
-    // client-side scrapers do not try to load
-    // "event-queue".
-    nextTick = serverSideRequire("event-queue").enqueue;
-} catch (e) {
-    // browsers
-    if (typeof MessageChannel !== "undefined") {
-        // modern browsers
-        // http://www.nonblocking.io/2011/06/windownexttick.html
-        var channel = new MessageChannel();
-        // linked list of tasks (single, with head node)
-        var head = {}, tail = head;
-        channel.port1.onmessage = function () {
-            var next = head.next;
-            var task = next.task;
-            head = next;
-            task();
-        };
-        nextTick = function (task) {
-            tail = tail.next = {task: task};
-            channel.port2.postMessage();
-        };
-    } else {
-        // old browsers
-        nextTick = function (task) {
-            setTimeout(task, 0);
-        };
-    }
-}
+var exports = {};
 
 // useful for an identity stub and default resolvers
 function identity (x) {return x;}
@@ -875,4 +827,5 @@ function ncall(callback, thisp /*, ...args*/) {
     return node(callback).apply(thisp, args);
 }
 
-});
+    return exports;
+};
