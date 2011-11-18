@@ -79,7 +79,7 @@ var valueOf = function (value) {
     if (value === void 0 || value === null) {
         return value;
     } else {
-        return value.valueOf();
+        return value['valueOf']();
     }
 };
 
@@ -87,7 +87,7 @@ var valueOf = function (value) {
  * Performs a task in a future turn of the event loop.
  * @param {Function} task
  */
-exports.nextTick = nextTick;
+exports['nextTick'] = nextTick;
 
 /**
  * Constructs a {promise, resolve} object.
@@ -98,7 +98,7 @@ exports.nextTick = nextTick;
  * object. To put the promise in the same state as another promise, invoke the
  * resolver with that other promise.
  */
-exports.defer = defer;
+exports['defer'] = defer;
 
 function defer() {
     // if "pending" is an "Array", that indicates that the promise has not yet
@@ -112,21 +112,21 @@ function defer() {
     var deferred = create(defer.prototype);
     var promise = create(Promise.prototype);
 
-    promise.promiseSend = function () {
+    promise['promiseSend'] = function () {
         var args = slice.call(arguments);
         if (pending) {
             pending.push(args);
         } else {
             nextTick(function () {
-                value.promiseSend.apply(value, args);
+                value['promiseSend'].apply(value, args);
             });
         }
     };
 
-    promise.valueOf = function () {
+    promise['valueOf'] = function () {
         if (pending)
             return promise;
-        return value.valueOf();
+        return value['valueOf']();
     };
 
     var resolve = function (resolvedValue) {
@@ -136,31 +136,31 @@ function defer() {
         value = ref(resolvedValue);
         reduce.call(pending, function (undefined, pending) {
             nextTick(function () {
-                value.promiseSend.apply(value, pending);
+                value['promiseSend'].apply(value, pending);
             });
         }, void 0);
         pending = void 0;
         return value;
     };
 
-    deferred.promise = freeze(promise);
-    deferred.resolve = resolve;
-    deferred.reject = function (reason) {
+    deferred['promise'] = freeze(promise);
+    deferred['resolve'] = resolve;
+    deferred['reject'] = function (reason) {
         return resolve(reject(reason));
     };
 
     return deferred;
 }
 
-defer.prototype.node = function () {
+defer.prototype['node'] = function () {
     var self = this;
     return function (error, value) {
         if (error) {
-            self.reject(error);
+            self['reject'](error);
         } else if (arguments.length > 2) {
-            self.resolve(Array.prototype.slice.call(arguments, 1));
+            self['resolve'](Array.prototype.slice.call(arguments, 1));
         } else {
-            self.resolve(value);
+            self['resolve'](value);
         }
     };
 };
@@ -176,7 +176,7 @@ defer.prototype.node = function () {
  * of the returned object, apart from that it is usable whereever promises are
  * bought and sold.
  */
-exports.makePromise = Promise;
+exports['makePromise'] = Promise;
 function Promise(descriptor, fallback, valueOf) {
 
     if (fallback === void 0) {
@@ -187,7 +187,7 @@ function Promise(descriptor, fallback, valueOf) {
 
     var promise = create(Promise.prototype);
 
-    promise.promiseSend = function (op, resolved /* ...args */) {
+    promise['promiseSend'] = function (op, resolved /* ...args */) {
         var args = slice.call(arguments, 2);
         var result;
         try {
@@ -203,13 +203,13 @@ function Promise(descriptor, fallback, valueOf) {
     };
 
     if (valueOf)
-        promise.valueOf = valueOf;
+        promise['valueOf'] = valueOf;
 
     return freeze(promise);
 };
 
 // provide thenables, CommonJS/Promises/A
-Promise.prototype.then = function (fulfilled, rejected) {
+Promise.prototype['then'] = function (fulfilled, rejected) {
     return when(this, fulfilled, rejected);
 };
 
@@ -238,11 +238,11 @@ reduce.call(
     void 0
 )
 
-Promise.prototype.toSource = function () {
+Promise.prototype['toSource'] = function () {
     return this.toString();
 };
 
-Promise.prototype.toString = function () {
+Promise.prototype['toString'] = function () {
     return '[object Promise]';
 };
 
@@ -252,15 +252,15 @@ freeze(Promise.prototype);
  * @returns whether the given object is a promise.
  * Otherwise it is a fulfilled value.
  */
-exports.isPromise = isPromise;
+exports['isPromise'] = isPromise;
 function isPromise(object) {
-    return object && typeof object.promiseSend === "function";
+    return object && typeof object['promiseSend'] === "function";
 };
 
 /**
  * @returns whether the given object is a resolved promise.
  */
-exports.isResolved = isResolved;
+exports['isResolved'] = isResolved;
 function isResolved(object) {
     return !isPromise(valueOf(object));
 };
@@ -269,7 +269,7 @@ function isResolved(object) {
  * @returns whether the given object is a value or fulfilled
  * promise.
  */
-exports.isFulfilled = isFulfilled;
+exports['isFulfilled'] = isFulfilled;
 function isFulfilled(object) {
     return !isPromise(valueOf(object)) && !isRejected(object);
 };
@@ -277,43 +277,49 @@ function isFulfilled(object) {
 /**
  * @returns whether the given object is a rejected promise.
  */
-exports.isRejected = isRejected;
+exports['isRejected'] = isRejected;
 function isRejected(object) {
     object = valueOf(object);
     if (object === void 0 || object === null)
         return false;
-    return !!object.promiseRejected;
+    return !!object['promiseRejected'];
 }
 
 /**
  * Constructs a rejected promise.
  * @param reason value describing the failure
  */
-exports.reject = reject;
+exports['reject'] = reject;
 function reject(reason) {
-    return Promise({
-        "when": function (rejected) {
-            return rejected ? rejected(reason) : reject(reason);
-        }
-    }, function fallback(op) {
+
+    var descriptor = {};
+    descriptor['when'] = function(rejected) {
+        return rejected ? rejected(reason) : reject(reason);
+    };
+
+    return Promise(
+    descriptor
+    , function fallback(op) {
         return reject(reason);
     }, function valueOf() {
         var rejection = create(reject.prototype);
-        rejection.promiseRejected = true;
-        rejection.reason = reason;
+        rejection['promiseRejected'] = true;
+        rejection['reason'] = reason;
         return rejection;
     });
 }
 
-reject.prototype = create(Promise.prototype, {
-    constructor: { value: reject }
-});
+var rejectDescriptor = {};
+rejectDescriptor['constructor'] = {};
+rejectDescriptor['constructor']['value'] = reject;
+
+reject.prototype = create(Promise.prototype, rejectDescriptor);
 
 /**
  * Constructs a promise for an immediate reference.
  * @param value immediate reference
  */
-exports.ref = ref;
+exports['ref'] = ref;
 function ref(object) {
     // If the object is already a Promise, return it directly.  This enables
     // the ref function to both be used to created references from
@@ -322,49 +328,50 @@ function ref(object) {
     if (isPromise(object))
         return object;
     // assimilate thenables, CommonJS/Promises/A
-    if (object && typeof object.then === "function") {
+    if (object && typeof object['then'] === "function") {
         var result = defer();
-        object.then(result.resolve, result.reject);
-        return result.promise;
+        object['then'](result['resolve'], result['reject']);
+        return result['promise'];
     }
-    return Promise({
-        "when": function (rejected) {
-            return object;
-        },
-        "get": function (name) {
-            return object[name];
-        },
-        "put": function (name, value) {
-            return object[name] = value;
-        },
-        "del": function (name) {
-            return delete object[name];
-        },
-        "post": function (name, value) {
-            return object[name].apply(object, value);
-        },
-        "apply": function (self, args) {
-            return object.apply(self, args);
-        },
-        "viewInfo": function () {
-            var on = object;
-            var properties = {};
-            while (on) {
-                Object.getOwnPropertyNames(on).forEach(function (name) {
-                    if (!properties[name])
-                        properties[name] = typeof on[name];
-                });
-                on = Object.getPrototypeOf(on);
-            }
-            return {
-                "type": typeof object,
-                "properties": properties
-            }
-        },
-        "keys": function () {
-            return keys(object);
+
+    var descriptor = {};
+    descriptor['when'] = function (rejected) {
+        return object;
+    };
+    descriptor['get'] = function (name) {
+        return object[name];
+    };
+    descriptor['put'] = function (name, value) {
+        return object[name] = value;
+    };
+    descriptor['del'] = function (name) {
+        return delete object[name];
+    };
+    descriptor['post'] = function (name, value) {
+        return object[name].apply(object, value);
+    };
+    descriptor['apply'] = function (self, args) {
+        return object.apply(self, args);
+    };
+    descriptor['viewInfo'] = function () {
+        var on = object;
+        var properties = {};
+        var info = {};
+        while (on) {
+            Object.getOwnPropertyNames(on).forEach(function (name) {
+                if (!properties[name])
+                    properties[name] = typeof on[name];
+            });
+            on = Object.getPrototypeOf(on);
         }
-    }, void 0, function valueOf() {
+        info['type'] = typeof object;
+        info['properties'] = properties;
+        return info;
+    };
+    descriptor['keys'] = function() {
+        return keys(object);
+    };
+    return Promise(descriptor, void 0, function valueOf() {
         return object;
     });
 }
@@ -378,11 +385,12 @@ function ref(object) {
  * additionally responds to the 'isDef' message
  * without a rejection.
  */
-exports.master =
+exports['master'] =
 function master(object) {
-    return Promise({
-        "isDef": function () {}
-    }, function fallback(op) {
+
+    var descriptor = {};
+    descriptor['isDef'] = function () {};
+    return Promise(descriptor, function fallback(op) {
         var args = slice.call(arguments);
         return send.apply(void 0, [object].concat(args));
     }, function () {
@@ -390,15 +398,15 @@ function master(object) {
     });
 }
 
-exports.viewInfo = viewInfo;
+exports['viewInfo'] = viewInfo;
 function viewInfo(object, info) {
     object = ref(object);
     if (info) {
-        return Promise({
-            "viewInfo": function () {
-                return info;
-            }
-        }, function fallback(op) {
+        var descriptor = {};
+        descriptor['viewInfo'] = function () {
+            return info;
+        };
+        return Promise(descriptor, function fallback(op) {
             var args = slice.call(arguments);
             return send.apply(void 0, [object].concat(args));
         }, function () {
@@ -409,8 +417,8 @@ function viewInfo(object, info) {
     }
 }
 
-exports.view = function (object) {
-    return viewInfo(object).when(function (info) {
+exports['view'] = function (object) {
+    return viewInfo(object)['when'](function (info) {
         var view;
         if (info.type === "function") {
             view = function () {
@@ -419,8 +427,8 @@ exports.view = function (object) {
         } else {
             view = {};
         }
-        var properties = info.properties || {};
-        Object.keys(properties).forEach(function (name) {
+        var properties = info['properties'] || {};
+        Object['keys'](properties)['forEach'](function (name) {
             if (properties[name] === "function") {
                 view[name] = function () {
                     return post(object, name, arguments);
@@ -446,7 +454,7 @@ exports.view = function (object) {
  * @param rejected  function to be called with the rejection reason
  * @return promise for the return value from the invoked callback
  */
-exports.when = when;
+exports['when'] = when;
 function when(value, fulfilled, rejected) {
     var deferred = defer();
     var done = false;   // ensure the untrusted promise makes at most a
@@ -469,26 +477,26 @@ function when(value, fulfilled, rejected) {
     }
 
     nextTick(function () {
-        ref(value).promiseSend("when", function (value) {
+        ref(value)['promiseSend']("when", function (value) {
             if (done)
                 return;
             done = true;
-            deferred.resolve(
+            deferred['resolve'](
                 ref(value)
-                .promiseSend("when", _fulfilled, _rejected)
+                ['promiseSend']("when", _fulfilled, _rejected)
             );
         }, function (reason) {
             if (done)
                 return;
             done = true;
-            deferred.resolve(_rejected(reason));
+            deferred['resolve'](_rejected(reason));
         });
     });
 
-    return deferred.promise;
+    return deferred['promise'];
 }
 
-exports.spread = spread;
+exports['spread'] = spread;
 function spread(promise, fulfilled, rejected) {
     return when(promise, function (values) {
         return fulfilled.apply(void 0, values);
@@ -528,7 +536,7 @@ function spread(promise, fulfilled, rejected) {
  *  [1]: http://wiki.ecmascript.org/doku.php?id=strawman:async_functions#reference_implementation
  *
  */
-exports.async = async;
+exports['async'] = async;
 function async(makeGenerator) {
     return function () {
         // when verb is "send", arg is a value
@@ -539,7 +547,7 @@ function async(makeGenerator) {
                 result = generator[verb](arg);
             } catch (exception) {
                 if (isStopIteration(exception)) {
-                    return exception.value;
+                    return exception['value'];
                 } else {
                     return reject(exception);
                 }
@@ -559,7 +567,7 @@ function async(makeGenerator) {
  *
  * "Method" constructs methods like "get(promise, name)" and "put(promise)".
  */
-exports.Method = Method;
+exports['Method'] = Method;
 function Method (op) {
     return function (object) {
         var args = slice.call(arguments, 1);
@@ -574,18 +582,18 @@ function Method (op) {
  * @param ...args further arguments to be forwarded to the operation
  * @returns result {Promise} a promise for the result of the operation
  */
-exports.send = send;
+exports['send'] = send;
 function send(object, op) {
     var deferred = defer();
     var args = slice.call(arguments, 2);
     object = ref(object);
     nextTick(function () {
-        object.promiseSend.apply(
+        object['promiseSend'].apply(
             object,
-            [op, deferred.resolve].concat(args)
+            [op, deferred['resolve']].concat(args)
         );
     });
-    return deferred.promise;
+    return deferred['promise'];
 }
 
 /**
@@ -594,7 +602,7 @@ function send(object, op) {
  * @param name      name of property to get
  * @return promise for the property value
  */
-exports.get = Method("get");
+exports['get'] = Method("get");
 
 /**
  * Sets the value of a property in a future turn.
@@ -603,7 +611,7 @@ exports.get = Method("get");
  * @param value     new value of property
  * @return promise for the return value
  */
-exports.put = Method("put");
+exports['put'] = Method("put");
 
 /**
  * Deletes a property in a future turn.
@@ -611,7 +619,7 @@ exports.put = Method("put");
  * @param name      name of property to delete
  * @return promise for the return value
  */
-exports.del = Method("del");
+exports['del'] = Method("del");
 
 /**
  * Invokes a method in a future turn.
@@ -625,7 +633,7 @@ exports.del = Method("del");
  *                  JSON serializable object.
  * @return promise for the return value
  */
-var post = exports.post = Method("post");
+var post = exports['post'] = Method("post");
 
 /**
  * Invokes a method in a future turn.
@@ -634,7 +642,7 @@ var post = exports.post = Method("post");
  * @param ...args   array of invocation arguments
  * @return promise for the return value
  */
-exports.invoke = function (value, name) {
+exports['invoke'] = function (value, name) {
     var args = slice.call(arguments, 2);
     return post(value, name, args);
 };
@@ -645,7 +653,7 @@ exports.invoke = function (value, name) {
  * @param context   the context object (this) for the call
  * @param args      array of application arguments
  */
-var apply = exports.apply = Method("apply");
+var apply = exports['apply'] = Method("apply");
 
 /**
  * Calls the promised function in a future turn.
@@ -653,7 +661,7 @@ var apply = exports.apply = Method("apply");
  * @param context   the context object (this) for the call
  * @param ...args   array of application arguments
  */
-var call = exports.call = function (value, context) {
+var call = exports['call'] = function (value, context) {
     var args = slice.call(arguments, 2);
     return apply(value, context, args);
 };
@@ -664,11 +672,11 @@ var call = exports.call = function (value, context) {
  * @param object    promise or immediate reference for target object
  * @return promise for the keys of the eventually resolved object
  */
-exports.keys = Method("keys");
+exports['keys'] = Method("keys");
 
 // By Mark Miller
 // http://wiki.ecmascript.org/doku.php?id=strawman:concurrency&rev=1308776521#allfulfilled
-exports.all = all;
+exports['all'] = all;
 function all(promises) {
     return when(promises, function (promises) {
         var countDown = promises.length;
@@ -679,38 +687,38 @@ function all(promises) {
             when(promise, function (value) {
                 promises[index] = value;
                 if (--countDown === 0)
-                    deferred.resolve(promises);
+                    deferred['resolve'](promises);
             })
-            .fail(deferred.reject)
+            ['fail'](deferred['reject'])
         }, void 0);
-        return deferred.promise;
+        return deferred['promise'];
     });
 }
 
 /**
  */
-exports.wait = function (promise) {
-    return all(arguments).get(0);
+exports['wait'] = function (promise) {
+    return all(arguments)['get'](0);
 };
 
 /**
  */
-exports.join = function () {
+exports['join'] = function () {
     var args = slice.call(arguments);
     var callback = args.pop();
-    return all(args).spread(callback);
+    return all(args)['spread'](callback);
 };
 
 /**
  */
-exports.fail = fail;
+exports['fail'] = fail;
 function fail(promise, rejected) {
     return when(promise, void 0, rejected);
 }
 
 /**
  */
-exports.fin = fin;
+exports['fin'] = fin;
 function fin(promise, callback) {
     return when(promise, function (value) {
         return when(callback(), function () {
@@ -727,7 +735,7 @@ function fin(promise, callback) {
  * Terminates a chain of promises, forcing rejections to be
  * thrown as exceptions.
  */
-exports.end = end;
+exports['end'] = end;
 function end(promise) {
     when(promise, void 0, function (error) {
         // forward to a future turn so that ``when``
@@ -740,19 +748,19 @@ function end(promise) {
 
 /**
  */
-exports.timeout = timeout;
+exports['timeout'] = timeout;
 function timeout(promise, timeout) {
     var deferred = defer();
-    when(promise, deferred.resolve, deferred.reject);
+    when(promise, deferred['resolve'], deferred['reject']);
     setTimeout(function () {
-        deferred.reject("Timed out");
+        deferred['reject']("Timed out");
     }, timeout);
-    return deferred.promise;
+    return deferred['promise'];
 }
 
 /**
  */
-exports.delay = delay;
+exports['delay'] = delay;
 function delay(promise, timeout) {
     if (arguments.length < 2) {
         timeout = promise;
@@ -760,12 +768,12 @@ function delay(promise, timeout) {
     }
     var deferred = defer();
     setTimeout(function () {
-        deferred.resolve(promise);
+        deferred['resolve'](promise);
     }, timeout);
-    return deferred.promise;
+    return deferred['promise'];
 }
 
-exports.wrap = wrap;
+exports['wrap'] = wrap;
 function wrap(callback) {
     return function () {
         var deferred = defer();
@@ -773,13 +781,13 @@ function wrap(callback) {
         // add a continuation that resolves the promise
         // trap exceptions thrown by the callback
         call(callback, this, deferred)
-        .fail(deferred.reject);
-        return deferred.promise;
+        ['fail'](deferred['reject']);
+        return deferred['promise'];
     };
-    return deferred.promise;
+    return deferred['promise'];
 }
 
-exports.wcall = wcall;
+exports['wcall'] = wcall;
 function wcall(callback /*, thisp, ...args*/) {
     var args = slice.call(arguments, 1);
     return wrap(callback).apply(void 0, args);
@@ -794,7 +802,7 @@ function wcall(callback /*, thisp, ...args*/) {
  *      .end()
  *
  */
-exports.node = node;
+exports['node'] = node;
 function node(callback /* thisp, ...args*/) {
     if (arguments.length > 1) {
         var args = Array.prototype.slice.call(arguments, 1);
@@ -804,11 +812,11 @@ function node(callback /* thisp, ...args*/) {
         var deferred = defer();
         var args = slice.call(arguments);
         // add a continuation that resolves the promise
-        args.push(deferred.node());
+        args.push(deferred['node']());
         // trap exceptions thrown by the callback
         apply(callback, this, args)
-        .fail(deferred.reject);
-        return deferred.promise;
+        ['fail'](deferred['reject']);
+        return deferred['promise'];
     };
 }
 
@@ -821,7 +829,7 @@ function node(callback /* thisp, ...args*/) {
  *      })
  *
  */
-exports.ncall = ncall;
+exports['ncall'] = ncall;
 function ncall(callback, thisp /*, ...args*/) {
     var args = slice.call(arguments, 2);
     return node(callback).apply(thisp, args);
